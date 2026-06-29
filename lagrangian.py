@@ -78,72 +78,80 @@ class Pendulum:
         return sol
 
 
+def main():
+    fig, axis = plt.subplots(2, 2)
+    max_reach = max(
+        initial_pendulum.length1 + initial_pendulum.length2,
+        second_pendulum.length1 + second_pendulum.length2,
+    )
+    axis[1, 1].set_xlim(-max_reach * 1.1, max_reach * 1.1)
+    axis[1, 1].set_ylim(-max_reach * 1.1, max_reach * 1.1)
+    (animated_plot,) = axis[1, 1].plot([], [])
+    (bobs,) = axis[1, 1].plot([], [], marker="o", linestyle="none")
+
+    (animated_plot_two,) = axis[1, 1].plot([], [])
+    (bobs_two,) = axis[1, 1].plot([], [], marker="o", linestyle="none")
+
+    store_state = initial_pendulum.simulate((0, 400), teval)
+    store_state_two = second_pendulum.simulate((0, 400), teval)
+
+    # Phase Portraits
+
+    axis[0, 0].plot(store_state.y[0], store_state.y[2])  # theta1 vs omega1
+    axis[0, 0].set_title("Phase Portrait of Theta1 vs Omega1")
+    axis[1, 0].plot(store_state.y[1], store_state.y[3])  # theta2 vs omega2
+    axis[1, 0].set_title("Phase Portrait of Theta2 vs Omega2")
+
+    # Lyapunov Divergence
+
+    divergence = np.abs(store_state.y[0] - store_state_two.y[0])
+    axis[0, 1].plot(teval, divergence)
+    axis[0, 1].set_yscale("log")
+    axis[0, 1].set_title("Lyapunov Divergence (Theta1)")
+
+    coords_all = initial_pendulum.coordinates(store_state.y[0], store_state.y[1])
+    x2_trail = coords_all[1, 0]
+    y2_trail = coords_all[1, 1]
+    (trail,) = axis[1, 1].plot([], [], linewidth=0.5, alpha=0.5, color="purple")
+    coords_all_two = second_pendulum.coordinates(
+        store_state_two.y[0], store_state_two.y[1]
+    )
+    x2_trail_two = coords_all_two[1, 0]
+    y2_trail_two = coords_all_two[1, 1]
+    (trail_two,) = axis[1, 1].plot([], [], linewidth=0.5, alpha=0.5, color="green")
+
+    def update(frame):
+        theta1, theta2 = store_state.y[0][frame], store_state.y[1][frame]
+        coordinates_at_frame = initial_pendulum.coordinates(theta1, theta2)
+        y2 = coordinates_at_frame[1, 1]
+        y1 = coordinates_at_frame[0, 1]
+        x2 = coordinates_at_frame[1, 0]
+        x1 = coordinates_at_frame[0, 0]
+        animated_plot.set_data([0, x1, x2], [0, y1, y2])
+        bobs.set_data([x1, x2], [y1, y2])
+
+        theta1_two, theta2_two = (
+            store_state_two.y[0][frame],
+            store_state_two.y[1][frame],
+        )
+        coordinates_at_frame_two = second_pendulum.coordinates(theta1_two, theta2_two)
+        y4 = coordinates_at_frame_two[1, 1]
+        y3 = coordinates_at_frame_two[0, 1]
+        x4 = coordinates_at_frame_two[1, 0]
+        x3 = coordinates_at_frame_two[0, 0]
+        animated_plot_two.set_data([0, x3, x4], [0, y3, y4])
+        bobs_two.set_data([x3, x4], [y3, y4])
+
+        trail.set_data(x2_trail[:frame], y2_trail[:frame])
+        trail_two.set_data(x2_trail_two[:frame], y2_trail_two[:frame])
+
+    animation = FuncAnimation(fig=fig, func=update, frames=len(teval), interval=25)
+
+    plt.show()
+
+
 if __name__ == "__main__":
     initial_pendulum = Pendulum(2, 1, 2, 1, 76, 90)
     teval = np.arange(0, 400, 0.5)
     second_pendulum = Pendulum(2, 1, 2, 1, 76.1, 90)
-
-fig, axis = plt.subplots(2, 2)
-axis[1, 1].set_xlim(-4, 4)  # Set these limits as max or min of length, later.
-axis[1, 1].set_ylim(-4, 4)
-(animated_plot,) = axis[1, 1].plot([], [])
-(bobs,) = axis[1, 1].plot([], [], marker="o", linestyle="none")
-
-(animated_plot_two,) = axis[1, 1].plot([], [])
-(bobs_two,) = axis[1, 1].plot([], [], marker="o", linestyle="none")
-
-store_state = initial_pendulum.simulate((0, 400), teval)
-store_state_two = second_pendulum.simulate((0, 400), teval)
-
-# Phase Portraits
-
-axis[0, 0].plot(store_state.y[0], store_state.y[2])  # theta1 vs omega1
-axis[0, 0].set_title("Phase Portrait of Theta1 vs Omega1")
-axis[1, 0].plot(store_state.y[1], store_state.y[3])  # theta2 vs omega2
-axis[1, 0].set_title("Phase Portrait of Theta2 vs Omega2")
-
-# Lyapunov Divergence
-
-divergence = np.abs(store_state.y[0] - store_state_two.y[0])
-axis[0, 1].plot(teval, divergence)
-axis[0, 1].set_yscale("log")
-axis[0, 1].set_title("Lyapunov Divergence (Theta1)")
-
-
-coords_all = initial_pendulum.coordinates(store_state.y[0], store_state.y[1])
-x2_trail = coords_all[1, 0]
-y2_trail = coords_all[1, 1]
-(trail,) = axis[1, 1].plot([], [], linewidth=0.5, alpha=0.5, color="purple")
-coords_all_two = second_pendulum.coordinates(store_state_two.y[0], store_state_two.y[1])
-x2_trail_two = coords_all_two[1, 0]
-y2_trail_two = coords_all_two[1, 1]
-(trail_two,) = axis[1, 1].plot([], [], linewidth=0.5, alpha=0.5, color="green")
-
-
-def update(frame):
-    theta1, theta2 = store_state.y[0][frame], store_state.y[1][frame]
-    coordinates_at_frame = initial_pendulum.coordinates(theta1, theta2)
-    y2 = coordinates_at_frame[1, 1]
-    y1 = coordinates_at_frame[0, 1]
-    x2 = coordinates_at_frame[1, 0]
-    x1 = coordinates_at_frame[0, 0]
-    animated_plot.set_data([0, x1, x2], [0, y1, y2])
-    bobs.set_data([x1, x2], [y1, y2])
-
-    theta1_two, theta2_two = store_state_two.y[0][frame], store_state_two.y[1][frame]
-    coordinates_at_frame_two = second_pendulum.coordinates(theta1_two, theta2_two)
-    y4 = coordinates_at_frame_two[1, 1]
-    y3 = coordinates_at_frame_two[0, 1]
-    x4 = coordinates_at_frame_two[1, 0]
-    x3 = coordinates_at_frame_two[0, 0]
-    animated_plot_two.set_data([0, x3, x4], [0, y3, y4])
-    bobs_two.set_data([x3, x4], [y3, y4])
-
-    trail.set_data(x2_trail[:frame], y2_trail[:frame])
-    trail_two.set_data(x2_trail_two[:frame], y2_trail_two[:frame])
-
-
-animation = FuncAnimation(fig=fig, func=update, frames=len(teval), interval=25)
-animation_two = FuncAnimation(fig=fig, func=update, frames=len(teval), interval=25)
-
-plt.show()
+    main()
